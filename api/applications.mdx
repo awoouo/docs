@@ -1,0 +1,282 @@
+---
+title: "应用接口：注册与管理业务应用的 REST API"
+sidebarTitle: "应用"
+description: "使用应用 API 以编程方式列出、注册、更新和删除工作空间中的业务应用，支持批量操作与状态查询。"
+---
+
+ACS 应用 API 让您能够以编程方式对工作空间内的业务应用进行全生命周期管理。无论是自动化应用注册流程、与 CI/CD 管道集成，还是周期性同步应用状态，应用 API 都能满足您的需求。您可以列出所有已接入的业务应用、注册新应用、更新应用信息、查询运行状态，以及在需要时移除不再使用的应用。所有写操作均需 `admin` 或 `developer` 角色权限。
+
+---
+
+## 获取应用列表
+
+<br />
+
+**`GET https://api.acs.com/v1/applications`**
+
+返回当前工作空间下所有已注册业务应用的分页列表。您可以通过 `status` 参数按运行状态进行筛选。
+
+### 查询参数
+
+<ParamField query="status" type="string" default="all">
+  按应用状态筛选。可选值：
+  - `active`：仅返回当前启用的应用
+  - `inactive`：仅返回已停用的应用
+  - `all`：返回全部应用（默认值）
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  指定返回结果的页码，从 `1` 开始计数。
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="20">
+  每页返回的应用条数，最大值为 `100`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/applications?status=active&page=1&per_page=20" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "data": [
+    {
+      "id": "app_m3n4o5",
+      "name": "HR 管理系统",
+      "url": "https://hr.example.com",
+      "description": "统一员工信息管理、考勤与薪资核算的人力资源平台。",
+      "icon_url": "https://hub.acs.com/icons/hr-system.png",
+      "access": "workspace",
+      "status": "active",
+      "created_at": "2024-01-15T09:00:00Z"
+    },
+    {
+      "id": "app_p6q7r8",
+      "name": "财务报表平台",
+      "url": "https://finance.example.com",
+      "description": "集成财务数据看板，支持多维度报表生成与导出。",
+      "icon_url": "https://hub.acs.com/icons/finance.png",
+      "access": "admin",
+      "status": "active",
+      "created_at": "2024-02-20T11:30:00Z"
+    }
+  ],
+  "meta": {
+    "total": 15,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 1
+  }
+}
+```
+
+---
+
+## 注册新应用
+
+<br />
+
+**`POST https://api.acs.com/v1/applications`**
+
+在当前工作空间中注册一个新的业务应用。注册成功后，该应用将出现在所有具有访问权限的成员门户中。
+
+### 请求体参数
+
+<ParamField body="name" type="string" required>
+  应用的显示名称，将在门户首页展示给用户。长度限制为 2–80 个字符。
+</ParamField>
+
+<ParamField body="url" type="string" required>
+  应用的访问地址，须为合法的 HTTPS URL。用户点击应用图标后将跳转至此地址。
+</ParamField>
+
+<ParamField body="description" type="string">
+  应用的简短描述，用于在门户中向用户展示应用的功能和用途。最长 500 个字符。
+</ParamField>
+
+<ParamField body="icon_url" type="string">
+  应用图标的 URL 地址，建议使用 PNG 或 SVG 格式，尺寸不小于 64×64 像素。若不提供，将使用系统默认图标。
+</ParamField>
+
+<ParamField body="access" type="string" default="workspace">
+  应用的可见范围。可选值：
+  - `public`：所有访客均可见
+  - `workspace`：仅工作空间成员可见（默认值）
+  - `admin`：仅管理员可见
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X POST "https://api.acs.com/v1/applications" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "项目管理平台",
+    "url": "https://pm.example.com",
+    "description": "用于跨部门项目追踪、任务分配与进度管理的协作工具。",
+    "icon_url": "https://hub.acs.com/icons/pm.png",
+    "access": "workspace"
+  }'
+```
+
+### 响应示例
+
+```json
+{
+  "id": "app_s9t0u1",
+  "name": "项目管理平台",
+  "url": "https://pm.example.com",
+  "description": "用于跨部门项目追踪、任务分配与进度管理的协作工具。",
+  "icon_url": "https://hub.acs.com/icons/pm.png",
+  "access": "workspace",
+  "status": "active",
+  "created_at": "2024-07-01T10:00:00Z"
+}
+```
+
+---
+
+## 更新应用
+
+<br />
+
+**`PUT https://api.acs.com/v1/applications/{id}`**
+
+更新指定应用的信息。您只需在请求体中传入需要修改的字段，未传入的字段将保持原值不变。
+
+### 路径参数
+
+<ParamField path="id" type="string" required>
+  目标应用的唯一标识符，格式为 `app_xxxxxxx`。
+</ParamField>
+
+### 请求体参数
+
+<ParamField body="name" type="string">
+  更新后的应用显示名称，长度限制为 2–80 个字符。
+</ParamField>
+
+<ParamField body="url" type="string">
+  更新后的应用访问地址，须为合法的 HTTPS URL。
+</ParamField>
+
+<ParamField body="description" type="string">
+  更新后的应用描述，最长 500 个字符。
+</ParamField>
+
+<ParamField body="icon_url" type="string">
+  更新后的应用图标 URL。
+</ParamField>
+
+<ParamField body="access" type="string">
+  更新后的可见范围，可选值为 `public`、`workspace` 或 `admin`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X PUT "https://api.acs.com/v1/applications/app_s9t0u1" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "项目管理平台 Pro",
+    "access": "admin"
+  }'
+```
+
+### 响应示例
+
+```json
+{
+  "id": "app_s9t0u1",
+  "name": "项目管理平台 Pro",
+  "url": "https://pm.example.com",
+  "description": "用于跨部门项目追踪、任务分配与进度管理的协作工具。",
+  "icon_url": "https://hub.acs.com/icons/pm.png",
+  "access": "admin",
+  "status": "active",
+  "created_at": "2024-07-01T10:00:00Z",
+  "updated_at": "2024-07-10T14:20:00Z"
+}
+```
+
+---
+
+## 删除应用
+
+<br />
+
+**`DELETE https://api.acs.com/v1/applications/{id}`**
+
+从当前工作空间中永久删除指定应用。删除成功后，API 将返回 `204 No Content`，无响应体。
+
+### 路径参数
+
+<ParamField path="id" type="string" required>
+  待删除应用的唯一标识符，格式为 `app_xxxxxxx`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X DELETE "https://api.acs.com/v1/applications/app_s9t0u1" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### 响应说明
+
+删除成功时，服务器返回 `HTTP 204 No Content`，响应体为空。若指定 `id` 不存在，则返回 `HTTP 404 Not Found`。
+
+<Warning>
+  应用删除操作**不可撤销**。删除后，该应用将立即从所有成员的门户首页移除，且所有与该应用关联的配置数据（包括访问权限规则和 Webhook 绑定）将被永久清除。请在执行删除前确认已通知受影响的用户。
+</Warning>
+
+---
+
+## 查询应用状态
+
+<br />
+
+**`GET https://api.acs.com/v1/applications/{id}/status`**
+
+查询指定应用的当前运行状态与可用性指标。该接口可集成到监控系统中，定期检测应用健康状况。
+
+### 路径参数
+
+<ParamField path="id" type="string" required>
+  目标应用的唯一标识符，格式为 `app_xxxxxxx`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/applications/app_m3n4o5/status" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "id": "app_m3n4o5",
+  "status": "active",
+  "uptime_percent": 99.85,
+  "last_checked": "2024-07-10T15:00:00Z"
+}
+```
+
+### 响应字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `status` | string | 应用当前状态，可能值为 `active`（运行中）、`inactive`（已停用）或 `degraded`（性能下降） |
+| `uptime_percent` | number | 过去 30 天内应用的可用率百分比，精确到小数点后两位 |
+| `last_checked` | string | 最近一次健康检查的 ISO 8601 时间戳 |

@@ -1,0 +1,241 @@
+---
+title: "内容接口：文档与博客内容的读取 API"
+sidebarTitle: "内容"
+description: "使用 ACS 内容 API 检索文档条目、博客文章列表与单篇内容，支持分页、关键词搜索与分类筛选。"
+---
+
+ACS 内容 API 为您提供对 ACS 信息中心内所有已发布文档与博客文章的只读访问能力。您可以通过关键词搜索、分类筛选与分页参数灵活检索内容，将企业知识库无缝集成到您自己的应用或工作流中。所有请求均需在请求头中携带有效的 API 密钥。
+
+---
+
+## 获取文档列表
+
+<br />
+
+**`GET https://api.acs.com/v1/content/docs`**
+
+返回当前工作空间下所有已发布文档的分页列表。您可以通过查询参数对结果进行关键词搜索与分类筛选。
+
+### 查询参数
+
+<ParamField query="q" type="string">
+  关键词搜索字符串。API 将对文档标题与正文内容进行全文匹配，返回所有包含该关键词的文档。例如：`q=onboarding`。
+</ParamField>
+
+<ParamField query="category" type="string">
+  按分类名称筛选文档。分类名称区分大小写，需与后台配置的分类标识完全一致。例如：`category=产品手册`。
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  指定返回结果的页码，从 `1` 开始计数。
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="20">
+  每页返回的文档条数，最大值为 `100`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/content/docs?q=入职&category=HR政策&page=1&per_page=20" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "data": [
+    {
+      "id": "doc_a1b2c3",
+      "title": "新员工入职指南",
+      "category": "HR政策",
+      "author": "张明",
+      "summary": "本指南涵盖新员工入职所需完成的全部流程，包括系统开通、权限申请与培训安排。",
+      "published_at": "2024-03-10T09:00:00Z",
+      "updated_at": "2024-06-01T14:30:00Z",
+      "url": "https://hub.acs.com/docs/doc_a1b2c3"
+    },
+    {
+      "id": "doc_d4e5f6",
+      "title": "员工手册 2024 版",
+      "category": "HR政策",
+      "author": "李华",
+      "summary": "2024 年度员工手册，详述公司规章制度、福利政策及行为准则。",
+      "published_at": "2024-01-02T08:00:00Z",
+      "updated_at": "2024-04-15T11:00:00Z",
+      "url": "https://hub.acs.com/docs/doc_d4e5f6"
+    }
+  ],
+  "meta": {
+    "total": 48,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 3
+  }
+}
+```
+
+---
+
+## 获取单篇文档
+
+<br />
+
+**`GET https://api.acs.com/v1/content/docs/{id}`**
+
+根据文档唯一标识符返回单篇文档的完整内容，包括正文、元数据及附件信息。
+
+### 路径参数
+
+<ParamField path="id" type="string" required>
+  文档的唯一标识符。该值可从获取文档列表接口的响应中获取，格式为 `doc_xxxxxxx`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/content/docs/doc_a1b2c3" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "id": "doc_a1b2c3",
+  "title": "新员工入职指南",
+  "category": "HR政策",
+  "author": "张明",
+  "summary": "本指南涵盖新员工入职所需完成的全部流程，包括系统开通、权限申请与培训安排。",
+  "body": "## 第一步：账号开通\n\n请联系 IT 服务台提交账号开通申请……（正文内容）",
+  "attachments": [
+    {
+      "filename": "入职清单.pdf",
+      "url": "https://hub.acs.com/files/checklist-2024.pdf",
+      "size_bytes": 204800
+    }
+  ],
+  "published_at": "2024-03-10T09:00:00Z",
+  "updated_at": "2024-06-01T14:30:00Z",
+  "url": "https://hub.acs.com/docs/doc_a1b2c3"
+}
+```
+
+---
+
+## 获取博客文章列表
+
+<br />
+
+**`GET https://api.acs.com/v1/content/blog`**
+
+返回工作空间内所有已发布博客文章的分页列表。支持关键词搜索与标签筛选，适合构建企业内部资讯聚合页面。
+
+### 查询参数
+
+<ParamField query="q" type="string">
+  关键词搜索字符串，对博客标题和正文进行全文检索。例如：`q=数字化转型`。
+</ParamField>
+
+<ParamField query="tag" type="string">
+  按标签名称筛选博客文章。一篇博客可拥有多个标签，此参数返回包含指定标签的所有文章。例如：`tag=行业动态`。
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  指定返回结果的页码，从 `1` 开始计数。
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="20">
+  每页返回的博客条数，最大值为 `100`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/content/blog?tag=行业动态&page=1&per_page=20" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "data": [
+    {
+      "id": "blog_g7h8i9",
+      "title": "2024 年企业数字化转型趋势解读",
+      "author": "王芳",
+      "tags": ["行业动态", "数字化", "战略"],
+      "excerpt": "本文梳理了 2024 年全球企业数字化转型的核心趋势，结合本土实践提供可落地的行动建议。",
+      "published_at": "2024-05-20T10:00:00Z",
+      "url": "https://hub.acs.com/blog/blog_g7h8i9"
+    },
+    {
+      "id": "blog_j0k1l2",
+      "title": "如何借助 AI 提升员工工作效率",
+      "author": "陈伟",
+      "tags": ["行业动态", "AI", "效率提升"],
+      "excerpt": "人工智能工具正在重塑企业办公方式，本文介绍五种可立即落地的 AI 赋能员工的方法。",
+      "published_at": "2024-06-05T08:30:00Z",
+      "url": "https://hub.acs.com/blog/blog_j0k1l2"
+    }
+  ],
+  "meta": {
+    "total": 32,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 2
+  }
+}
+```
+
+---
+
+## 获取单篇博客
+
+<br />
+
+**`GET https://api.acs.com/v1/content/blog/{id}`**
+
+根据博客文章唯一标识符返回单篇博客的完整内容，包括正文 Markdown、标签列表及作者信息。
+
+### 路径参数
+
+<ParamField path="id" type="string" required>
+  博客文章的唯一标识符，格式为 `blog_xxxxxxx`，可从博客列表接口响应中获取。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/content/blog/blog_g7h8i9" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "id": "blog_g7h8i9",
+  "title": "2024 年企业数字化转型趋势解读",
+  "author": "王芳",
+  "author_avatar": "https://hub.acs.com/avatars/wangfang.png",
+  "tags": ["行业动态", "数字化", "战略"],
+  "excerpt": "本文梳理了 2024 年全球企业数字化转型的核心趋势，结合本土实践提供可落地的行动建议。",
+  "body": "## 趋势一：云原生架构的全面普及\n\n越来越多的企业正在将核心业务系统迁移至云原生架构……（正文内容）",
+  "published_at": "2024-05-20T10:00:00Z",
+  "updated_at": "2024-05-22T16:00:00Z",
+  "url": "https://hub.acs.com/blog/blog_g7h8i9"
+}
+```
+
+---
+
+<Note>
+  所有内容接口均为**只读**接口。文档与博客内容的创建、编辑和删除操作须通过 **ACS 信息中心管理控制台**完成，不支持通过 API 写入。如需批量导入内容，请联系您的客户成功经理获取数据迁移支持。
+</Note>

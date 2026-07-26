@@ -1,30 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
+  "projectType": "saas",
+  "projectName": "ACS 信息中心",
+  "projectDescription": "一站式企业信息中心，集成主页、文档、API、博客、应用入口与体验中心，帮助用户快速访问和使用全套产品与服务。",
   "theme": "luma",
-  "name": "ACS 信息中心",
-  "colors": {
-    "primary": "#ef7025",
-    "light": "#eec9bc",
-    "dark": "#4fa1ab"
-  },
-  "favicon": "/favicon.svg",
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "联系我们",
-        "href": "mailto:support@acs.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "进入控制台",
-      "href": "https://app.acs.com"
-    }
-  },
+  "primaryColor": "#ef7025",
+  "lightColor": "#eec9bc",
+  "darkColor": "#4fa1ab",
   "navigation": {
     "tabs": [
       {
@@ -91,26 +72,22 @@
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "体验中心",
-          "href": "https://experience.acs.com",
-          "icon": "sparkles"
-        },
-        {
-          "anchor": "博客",
-          "href": "https://blog.acs.com",
-          "icon": "newspaper"
-        }
-      ]
-    }
+    ]
   },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/acs",
-      "linkedin": "https://linkedin.com/company/acs"
-    }
-  }
+  "keyFeatures": [
+    "统一门户首页，集中展示公司产品与公告",
+    "在线文档中心，支持结构化内容浏览与搜索",
+    "API 接入能力，支持第三方系统集成",
+    "企业博客，发布产品动态与行业洞察",
+    "应用入口，一键直达各业务系统",
+    "体验中心，提供产品演示与沙箱环境"
+  ],
+  "publicApiSurface": [
+    "GET /api/v1/content",
+    "GET /api/v1/applications",
+    "POST /api/v1/auth/token",
+    "GET /api/v1/users/me",
+    "POST /api/v1/webhooks",
+    "GET /api/v1/experience/demos"
+  ]
 }

@@ -1,0 +1,248 @@
+---
+title: "用户接口：获取和管理账号信息的 API"
+sidebarTitle: "用户"
+description: "通过用户 API 获取当前账号信息、查询工作空间成员列表，以及管理成员角色和访问权限。"
+---
+
+ACS 用户 API 为您提供对工作空间成员体系的完整管理能力。您可以查询当前已认证账号的详细信息，获取工作空间内所有成员的列表，邀请新成员加入，以及对现有成员的角色权限进行调整或将其移出工作空间。用户管理类的写操作（邀请、更新角色、移除成员）需要调用方具备 `admin` 角色权限。
+
+---
+
+## 获取当前用户信息
+
+<br />
+
+**`GET https://api.acs.com/v1/users/me`**
+
+返回当前 API 密钥所关联账号的完整信息，包括账号 ID、姓名、邮箱、所属工作空间及角色。常用于验证认证状态或在应用中展示当前登录用户的身份信息。
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/users/me" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "id": "usr_v2w3x4",
+  "name": "李晓明",
+  "email": "lixiaoming@example.com",
+  "role": "admin",
+  "workspace_id": "ws_yz56ab78",
+  "avatar_url": "https://hub.acs.com/avatars/usr_v2w3x4.png",
+  "created_at": "2023-11-01T08:00:00Z"
+}
+```
+
+### 响应字段说明
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | 用户唯一标识符 |
+| `name` | string | 用户姓名 |
+| `email` | string | 登录邮箱地址 |
+| `role` | string | 当前角色：`admin`、`developer` 或 `member` |
+| `workspace_id` | string | 所属工作空间的唯一标识符 |
+| `created_at` | string | 账号创建时间（ISO 8601 格式） |
+
+---
+
+## 获取工作空间成员列表
+
+<br />
+
+**`GET https://api.acs.com/v1/users`**
+
+返回当前工作空间内所有成员的分页列表。您可以通过 `role` 参数按角色类型进行筛选，便于管理不同权限级别的人员。
+
+### 查询参数
+
+<ParamField query="role" type="string">
+  按成员角色筛选。可选值：
+  - `admin`：仅返回工作空间管理员
+  - `developer`：仅返回开发者成员
+  - `member`：仅返回普通成员
+  
+  不传该参数时默认返回所有角色的成员。
+</ParamField>
+
+<ParamField query="page" type="integer" default="1">
+  指定返回结果的页码，从 `1` 开始计数。
+</ParamField>
+
+<ParamField query="per_page" type="integer" default="20">
+  每页返回的成员数量，最大值为 `100`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X GET "https://api.acs.com/v1/users?role=developer&page=1&per_page=20" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+### 响应示例
+
+```json
+{
+  "data": [
+    {
+      "id": "usr_c9d0e1",
+      "name": "王建国",
+      "email": "wangjianguo@example.com",
+      "role": "developer",
+      "workspace_id": "ws_yz56ab78",
+      "created_at": "2024-02-14T10:00:00Z"
+    },
+    {
+      "id": "usr_f2g3h4",
+      "name": "陈思远",
+      "email": "chensiyuan@example.com",
+      "role": "developer",
+      "workspace_id": "ws_yz56ab78",
+      "created_at": "2024-03-08T09:30:00Z"
+    }
+  ],
+  "meta": {
+    "total": 7,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 1
+  }
+}
+```
+
+---
+
+## 邀请新成员
+
+<br />
+
+**`POST https://api.acs.com/v1/users/invite`**
+
+向指定邮箱地址发送工作空间邀请。被邀请人将收到一封包含激活链接的邮件，点击链接并完成身份验证后即可加入工作空间。邀请链接的有效期为 **72 小时**。
+
+### 请求体参数
+
+<ParamField body="email" type="string" required>
+  被邀请人的邮箱地址。若该邮箱已是工作空间成员，接口将返回 `409 Conflict` 错误。
+</ParamField>
+
+<ParamField body="role" type="string" required>
+  为被邀请人预设的角色。可选值为 `admin`、`developer` 或 `member`。被邀请人接受邀请后将以此角色加入工作空间。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X POST "https://api.acs.com/v1/users/invite" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "zhaolei@example.com",
+    "role": "member"
+  }'
+```
+
+### 响应示例
+
+```json
+{
+  "id": "inv_i5j6k7",
+  "email": "zhaolei@example.com",
+  "role": "member",
+  "workspace_id": "ws_yz56ab78",
+  "status": "pending",
+  "invited_by": "usr_v2w3x4",
+  "expires_at": "2024-07-13T10:00:00Z",
+  "created_at": "2024-07-10T10:00:00Z"
+}
+```
+
+邀请创建成功后，`status` 字段值为 `pending`，表示被邀请人尚未完成激活。成员接受邀请后，状态将自动变更为 `accepted`，并在成员列表中正式出现。
+
+---
+
+## 更新成员角色
+
+<br />
+
+**`PUT https://api.acs.com/v1/users/{id}/role`**
+
+修改指定成员在当前工作空间内的角色。角色变更将立即生效，影响该成员对工作空间内应用和功能的访问权限。
+
+### 路径参数
+
+<ParamField path="id" type="string" required>
+  目标成员的唯一标识符，格式为 `usr_xxxxxxx`。
+</ParamField>
+
+### 请求体参数
+
+<ParamField body="role" type="string" required>
+  更新后的角色。可选值为 `admin`、`developer` 或 `member`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X PUT "https://api.acs.com/v1/users/usr_c9d0e1/role" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "role": "admin"
+  }'
+```
+
+### 响应示例
+
+```json
+{
+  "id": "usr_c9d0e1",
+  "name": "王建国",
+  "email": "wangjianguo@example.com",
+  "role": "admin",
+  "workspace_id": "ws_yz56ab78",
+  "updated_at": "2024-07-10T16:00:00Z"
+}
+```
+
+<Warning>
+  仅工作空间**管理员**（`admin` 角色）有权修改成员角色。若使用 `developer` 或 `member` 权限的 API 密钥调用此接口，将返回 `403 Forbidden` 错误。此外，工作空间内至少需要保留一名管理员，不可将最后一名管理员的角色降级。
+</Warning>
+
+---
+
+## 移除成员
+
+<br />
+
+**`DELETE https://api.acs.com/v1/users/{id}`**
+
+将指定成员从当前工作空间中移除。操作成功后返回 `HTTP 204 No Content`。
+
+### 路径参数
+
+<ParamField path="id" type="string" required>
+  待移除成员的唯一标识符，格式为 `usr_xxxxxxx`。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X DELETE "https://api.acs.com/v1/users/usr_f2g3h4" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+### 响应说明
+
+移除成功时服务器返回 `HTTP 204 No Content`，响应体为空。被移除的成员将立即失去对该工作空间内所有应用和内容的访问权限。
+
+<Note>
+  此操作仅将该用户从**当前工作空间**中移除，并不会删除其 ACS 账号本身。被移除的用户可以继续使用其账号登录 ACS 平台或加入其他工作空间。若需注销账号，请联系 ACS 平台管理员或通过管理控制台操作。
+</Note>

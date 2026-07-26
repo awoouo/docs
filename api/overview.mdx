@@ -1,0 +1,188 @@
+---
+title: "ACS REST API 概览与快速入门"
+sidebarTitle: "API 概览"
+description: "ACS 提供完整的 RESTful API，支持内容管理、应用集成与用户数据访问。了解基础 URL、请求格式与响应结构。"
+---
+
+ACS 信息中心 REST API 为开发者提供了一套完整、标准化的编程接口，涵盖内容管理、应用集成与用户数据访问等核心业务场景。无论您是构建内部工具、第三方集成，还是自动化企业工作流，均可通过 API 以安全、高效的方式与 ACS 平台进行交互。本文档面向具备 HTTP 基础知识的开发者，帮助您快速上手并深入使用 ACS API。
+
+---
+
+## 基础信息
+
+在开始调用 API 之前，请先了解以下基本配置信息：
+
+| 参数 | 值 |
+|------|----|
+| 生产环境 Base URL | `https://api.acs.com/v1` |
+| 沙箱环境 Base URL | `https://sandbox.api.acs.com/v1` |
+| 通信协议 | HTTPS（不支持 HTTP 明文传输） |
+| 数据格式 | JSON |
+| 字符编码 | UTF-8 |
+
+<Info>
+  沙箱环境与生产环境完全隔离，数据互不影响。建议您在开发和测试阶段使用沙箱环境，确认无误后再切换至生产环境。沙箱环境使用前缀为 `sk_test_` 的测试密钥，详见[认证文档](/api/authentication)。
+</Info>
+
+---
+
+## 请求格式
+
+所有 API 请求均须通过 HTTPS 发送，并在请求头中携带以下两个必填字段：
+
+- **`Authorization`**：使用 Bearer Token 格式传递您的 API 密钥，格式为 `Bearer {YOUR_API_KEY}`。
+- **`Content-Type`**：所有携带请求体的请求（如 POST、PUT、PATCH）均需设置为 `application/json`。GET 请求亦建议显式设置该头部，以确保兼容性。
+
+以下是一个标准的 GET 请求示例，用于获取您账号下的应用列表：
+
+```bash
+curl -X GET https://api.acs.com/v1/applications \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+对于包含请求体的请求（例如创建资源），请确保将 JSON 数据通过 `-d` 参数传递：
+
+```bash
+curl -X POST https://api.acs.com/v1/applications \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "我的新应用",
+    "description": "用于测试的示例应用"
+  }'
+```
+
+---
+
+## 响应结构
+
+ACS API 所有响应均遵循统一的 JSON 信封（Envelope）格式，便于客户端进行一致性处理。
+
+### 单条资源响应
+
+当请求返回单个对象时，响应体结构如下：
+
+```json
+{
+  "data": { ... },
+  "meta": {
+    "request_id": "req_abc123",
+    "timestamp": "2024-01-15T08:00:00Z"
+  }
+}
+```
+
+- **`data`**：包含实际的业务数据对象。
+- **`meta.request_id`**：本次请求的唯一标识符，在排查问题时请提供此 ID。
+- **`meta.timestamp`**：服务器处理请求时的 UTC 时间戳，格式符合 ISO 8601 标准。
+
+### 列表资源响应
+
+当请求返回资源列表时，响应体会额外包含分页信息：
+
+```json
+{
+  "data": [ ... ],
+  "pagination": {
+    "page": 1,
+    "per_page": 20,
+    "total": 150,
+    "total_pages": 8
+  }
+}
+```
+
+- **`data`**：包含当前页的资源对象数组。
+- **`pagination.page`**：当前页码（从 1 开始）。
+- **`pagination.per_page`**：每页返回的资源数量。
+- **`pagination.total`**：符合条件的资源总数。
+- **`pagination.total_pages`**：总页数。
+
+---
+
+## 错误码
+
+当请求发生错误时，API 将返回对应的 HTTP 状态码，并在响应体中提供结构化的错误信息。以下是常见错误码及其含义：
+
+| HTTP 状态码 | 错误类型 | 说明 |
+|-------------|----------|------|
+| `400` | `bad_request` | 请求参数格式错误，请检查请求体或查询参数是否符合规范 |
+| `401` | `unauthorized` | API 密钥无效、已过期或未在请求头中提供 |
+| `403` | `forbidden` | 当前密钥无权访问该资源，请确认所需权限范围 |
+| `404` | `not_found` | 请求的资源不存在，请检查资源 ID 是否正确 |
+| `429` | `rate_limit_exceeded` | 请求频率超过限制，请稍后重试 |
+| `500` | `internal_error` | 服务器内部错误，请联系 ACS 技术支持并提供 `request_id` |
+
+错误响应体示例：
+
+```json
+{
+  "error": {
+    "code": "bad_request",
+    "message": "参数 'name' 为必填字段，不能为空",
+    "request_id": "req_err456"
+  }
+}
+```
+
+---
+
+## 请求频率限制
+
+为保障平台稳定性，ACS API 对每个 API 密钥实施以下频率限制：
+
+- **每分钟**：最多 **1,000** 次请求
+- **每小时**：最多 **10,000** 次请求
+
+每次 API 响应均会在请求头中返回当前频率限制状态，方便您实时监控使用情况：
+
+| 响应头 | 说明 |
+|--------|------|
+| `X-RateLimit-Limit` | 当前时间窗口内允许的最大请求次数 |
+| `X-RateLimit-Remaining` | 当前时间窗口内剩余的可用请求次数 |
+| `X-RateLimit-Reset` | 频率限制重置的 Unix 时间戳（秒） |
+
+当请求触发频率限制时，API 将返回 `429` 状态码。建议您在客户端实现指数退避（Exponential Backoff）重试策略，以优雅地处理此类情况。
+
+---
+
+## 分页
+
+所有返回列表的接口均支持分页查询，通过以下查询参数进行控制：
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `page` | integer | `1` | 请求的页码，从 1 开始 |
+| `per_page` | integer | `20` | 每页返回的资源数量，最大值为 `100` |
+
+**示例请求**，获取第 2 页、每页 50 条的应用列表：
+
+```bash
+curl -X GET "https://api.acs.com/v1/applications?page=2&per_page=50" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json"
+```
+
+响应中的 `pagination` 对象将告知您总记录数与总页数，帮助您构建完整的翻页逻辑。
+
+---
+
+## 可用接口
+
+ACS API 按业务领域划分为以下几组接口，点击对应卡片查看详细文档：
+
+<CardGroup cols={2}>
+  <Card title="内容接口" icon="file-lines" href="/api/content">
+    管理企业内容资产，包括文章、公告、文档的创建、更新、查询与删除操作。
+  </Card>
+  <Card title="应用接口" icon="grid-2" href="/api/applications">
+    集成与管理已接入 ACS 信息中心的企业应用，查询应用状态与配置信息。
+  </Card>
+  <Card title="用户接口" icon="users" href="/api/users">
+    访问与管理用户账号信息、权限角色及偏好设置，支持用户数据的查询与更新。
+  </Card>
+  <Card title="Webhooks" icon="webhook" href="/api/webhooks">
+    配置事件推送，当 ACS 平台发生特定事件时，实时向您的服务端发送通知。
+  </Card>
+</CardGroup>

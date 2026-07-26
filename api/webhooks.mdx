@@ -1,0 +1,211 @@
+---
+title: "Webhook 集成：接收 ACS 实时事件通知"
+sidebarTitle: "Webhooks"
+description: "通过 Webhook 订阅 ACS 事件，在应用状态变更、内容更新或成员操作时向您的服务器发送实时 HTTP 通知。"
+---
+
+ACS Webhook 允许您订阅工作空间内发生的关键事件，并在事件触发时以 HTTP POST 请求的形式将事件数据实时推送至您指定的服务器端点。相比轮询 API，Webhook 能显著降低系统延迟和请求开销，适合构建实时通知、自动化审计日志、与第三方系统同步等场景。您只需注册一个目标 URL 并选择需要订阅的事件类型，ACS 将在事件发生时自动向您的服务器发送通知。
+
+---
+
+## 支持的事件类型
+
+以下为 ACS 当前支持的全部 Webhook 事件类型：
+
+| 事件 | 说明 |
+|------|------|
+| `application.created` | 新应用已成功注册至工作空间 |
+| `application.updated` | 已有应用的信息（名称、URL、权限等）已更新 |
+| `application.deleted` | 应用已从工作空间中永久删除 |
+| `content.published` | 新文档或博客文章已在信息中心发布 |
+| `user.invited` | 新成员邀请已发送，状态为待接受 |
+| `user.removed` | 成员已从工作空间中移除 |
+
+---
+
+## 创建 Webhook
+
+<br />
+
+**`POST https://api.acs.com/v1/webhooks`**
+
+创建一个新的 Webhook 订阅，将指定事件的通知推送至您的服务器端点。创建成功后，ACS 会立即开始向目标 URL 推送已订阅事件的通知。
+
+### 请求体参数
+
+<ParamField body="url" type="string" required>
+  接收 Webhook 通知的目标端点 URL，须为可公开访问的 HTTPS 地址。ACS 将通过 POST 请求向此地址发送事件数据。
+</ParamField>
+
+<ParamField body="events" type="array" required>
+  需要订阅的事件类型数组。至少需要包含一个事件类型。可选值见上方**支持的事件类型**表格。传入 `["*"]` 可订阅全部事件。
+</ParamField>
+
+<ParamField body="secret" type="string">
+  用于请求签名验证的密钥字符串。若提供此参数，ACS 将在每次推送请求的头部携带 `X-ACS-Signature` 字段（使用 HMAC-SHA256 算法生成），供您验证请求来源的合法性。强烈建议在生产环境中配置签名密钥。
+</ParamField>
+
+### 请求示例
+
+```bash
+curl -X POST "https://api.acs.com/v1/webhooks" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://yourserver.example.com/webhooks/acs",
+    "events": ["application.created", "application.deleted", "user.invited"],
+    "secret": "your_webhook_secret_key"
+  }'
+```
+
+### 响应示例
+
+```json
+{
+  "id": "wh_l8m9n0",
+  "url": "https://yourserver.example.com/webhooks/acs",
+  "events": ["application.created", "application.deleted", "user.invited"],
+  "status": "active",
+  "created_at": "2024-07-10T10:00:00Z"
+}
+```
+
+---
+
+## Webhook 请求格式
+
+每当已订阅的事件触发时，ACS 将向您配置的目标 URL 发送一个标准 HTTP POST 请求，请求体为 JSON 格式。
+
+### 请求体示例
+
+```json
+{
+  "id": "evt_abc123",
+  "event": "application.created",
+  "timestamp": "2024-01-15T08:00:00Z",
+  "data": {
+    "id": "app_xyz",
+    "name": "HR 系统",
+    "url": "https://hr.example.com"
+  }
+}
+```
+
+### 请求头字段
+
+ACS 推送请求将始终携带以下 HTTP 请求头：
+
+| 请求头 | 说明 |
+|--------|------|
+| `X-ACS-Event` | 触发本次推送的事件类型，例如 `application.created` |
+| `X-ACS-Delivery` | 本次推送的唯一标识符，与响应体中的 `id` 字段一致，可用于幂等处理 |
+| `X-ACS-Signature` | 请求体的 HMAC-SHA256 签名，格式为 `sha256=<digest>`。仅在创建 Webhook 时提供了 `secret` 的情况下才会包含此请求头 |
+
+您的服务器须在收到请求后 **5 秒内**返回 `2xx` 状态码，否则 ACS 将视为本次推送失败并触发重试机制。
+
+---
+
+## 签名验证
+
+当您在创建 Webhook 时提供了 `secret` 密钥，ACS 会对每次推送的请求体使用 HMAC-SHA256 算法计算签名，并将签名附在 `X-ACS-Signature` 请求头中。您可以在服务器端按照相同方式重新计算签名，并与请求头中的值进行比对，从而验证请求确实来自 ACS，防止伪造请求攻击。
+
+下面的 Python 示例展示了签名验证的标准实现：
+
+```python
+import hmac
+import hashlib
+
+def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
+    """
+    验证 ACS Webhook 请求签名。
+
+    :param payload: 原始请求体的字节内容（从 request.body 获取，勿解码）
+    :param signature: X-ACS-Signature 请求头的值，格式为 'sha256=<digest>'
+    :param secret: 创建 Webhook 时配置的密钥字符串
+    :return: 签名合法返回 True，否则返回 False
+    """
+    expected = hmac.new(
+        secret.encode(),
+        payload,
+        hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(f'sha256={expected}', signature)
+```
+
+在您的路由处理器中，请务必使用原始字节流（raw bytes）进行签名计算，而非对请求体进行 JSON 解析后再序列化，否则字段顺序或空白字符的差异可能导致签名不一致。
+
+---
+
+## 管理 Webhook
+
+### 获取 Webhook 列表
+
+**`GET https://api.acs.com/v1/webhooks`**
+
+返回当前工作空间内所有已创建的 Webhook 订阅列表。
+
+```bash
+curl -X GET "https://api.acs.com/v1/webhooks" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Accept: application/json"
+```
+
+**响应示例**
+
+```json
+{
+  "data": [
+    {
+      "id": "wh_l8m9n0",
+      "url": "https://yourserver.example.com/webhooks/acs",
+      "events": ["application.created", "application.deleted", "user.invited"],
+      "status": "active",
+      "created_at": "2024-07-10T10:00:00Z"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "page": 1,
+    "per_page": 20,
+    "total_pages": 1
+  }
+}
+```
+
+### 删除 Webhook
+
+**`DELETE https://api.acs.com/v1/webhooks/{id}`**
+
+永久删除指定的 Webhook 订阅，删除后 ACS 将停止向该端点推送任何事件通知。
+
+```bash
+curl -X DELETE "https://api.acs.com/v1/webhooks/wh_l8m9n0" \
+  -H "Authorization: Bearer YOUR_API_KEY"
+```
+
+删除成功时服务器返回 `HTTP 204 No Content`，响应体为空。
+
+---
+
+## 重试机制
+
+若 ACS 向您的服务器推送事件时未能收到 `2xx` 响应（例如目标服务器超时、返回 `5xx` 错误或连接被拒绝），ACS 将按照以下策略自动进行重试：
+
+| 重试次数 | 延迟时间 |
+|----------|----------|
+| 第 1 次重试 | 初次失败后 **5 秒** |
+| 第 2 次重试 | 第 1 次重试失败后 **30 秒** |
+| 第 3 次重试 | 第 2 次重试失败后 **5 分钟** |
+
+经过全部 3 次重试后仍未成功，ACS 将把该次推送标记为**失败（failed）**，不再继续重试。此时对应 Webhook 的 `status` 字段将更新为 `failed`。您可以登录管理控制台查看失败的推送记录，并手动触发重新投递。
+
+为降低推送失败概率，建议您：
+- 确保目标端点在正常情况下能在 5 秒内响应
+- 将业务处理逻辑与请求接收逻辑分离（先快速返回 `200 OK`，再异步处理事件数据）
+- 配置服务监控和告警，及时发现端点异常
+
+---
+
+<Tip>
+  在将 Webhook 接入生产环境之前，建议您先使用 **ACS 体验中心沙箱**（Experience Center Sandbox）进行端到端测试。沙箱环境支持手动触发各类事件，并提供推送请求与响应的完整日志，帮助您快速调试签名验证逻辑和事件处理流程，无需担心影响真实数据。进入管理控制台 → 开发者工具 → Webhook 测试，即可访问沙箱功能。
+</Tip>
