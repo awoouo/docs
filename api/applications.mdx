@@ -1,7 +1,7 @@
 ---
-title: "应用接口：注册与管理业务应用的 REST API"
+title: "ACS 信息中心应用 API 完整参考：列出、注册、更新和删除工作空间内的业务应用的 REST 接口"
 sidebarTitle: "应用"
-description: "使用应用 API 以编程方式列出、注册、更新和删除工作空间中的业务应用，支持批量操作与状态查询。"
+description: "通过 ACS 信息中心应用 API，以编程方式列出工作空间内已注册的全部业务应用、向工作空间注册新应用并配置可见范围、更新应用名称与图标地址，以及移除不再需要的应用，适合集成到 CI/CD 管道或自动化运维脚本，所有写操作均需调用方具备管理员或开发者角色权限。"
 ---
 
 ACS 应用 API 让您能够以编程方式对工作空间内的业务应用进行全生命周期管理。无论是自动化应用注册流程、与 CI/CD 管道集成，还是周期性同步应用状态，应用 API 都能满足您的需求。您可以列出所有已接入的业务应用、注册新应用、更新应用信息、查询运行状态，以及在需要时移除不再使用的应用。所有写操作均需 `admin` 或 `developer` 角色权限。
@@ -238,45 +238,4 @@ curl -X DELETE "https://api.acs.com/v1/applications/app_s9t0u1" \
   应用删除操作**不可撤销**。删除后，该应用将立即从所有成员的门户首页移除，且所有与该应用关联的配置数据（包括访问权限规则和 Webhook 绑定）将被永久清除。请在执行删除前确认已通知受影响的用户。
 </Warning>
 
----
 
-## 查询应用状态
-
-<br />
-
-**`GET https://api.acs.com/v1/applications/{id}/status`**
-
-查询指定应用的当前运行状态与可用性指标。该接口可集成到监控系统中，定期检测应用健康状况。
-
-### 路径参数
-
-<ParamField path="id" type="string" required>
-  目标应用的唯一标识符，格式为 `app_xxxxxxx`。
-</ParamField>
-
-### 请求示例
-
-```bash
-curl -X GET "https://api.acs.com/v1/applications/app_m3n4o5/status" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Accept: application/json"
-```
-
-### 响应示例
-
-```json
-{
-  "id": "app_m3n4o5",
-  "status": "active",
-  "uptime_percent": 99.85,
-  "last_checked": "2024-07-10T15:00:00Z"
-}
-```
-
-### 响应字段说明
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `status` | string | 应用当前状态，可能值为 `active`（运行中）、`inactive`（已停用）或 `degraded`（性能下降） |
-| `uptime_percent` | number | 过去 30 天内应用的可用率百分比，精确到小数点后两位 |
-| `last_checked` | string | 最近一次健康检查的 ISO 8601 时间戳 |

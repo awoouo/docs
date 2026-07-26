@@ -1,7 +1,7 @@
 ---
-title: "Webhook 集成：接收 ACS 实时事件通知"
+title: "ACS 信息中心 Webhook API 完整参考：创建、查询与删除工作空间内的实时事件通知订阅接口"
 sidebarTitle: "Webhooks"
-description: "通过 Webhook 订阅 ACS 事件，在应用状态变更、内容更新或成员操作时向您的服务器发送实时 HTTP 通知。"
+description: "通过 ACS 信息中心 Webhook API，向指定 HTTPS 端点订阅应用注册、内容发布和成员邀请等工作空间关键事件，在事件触发时实时接收 HTTP POST 推送通知，并通过 HMAC-SHA256 签名验证与自动重试机制保障事件数据的安全可靠投递到您的服务。"
 ---
 
 ACS Webhook 允许您订阅工作空间内发生的关键事件，并在事件触发时以 HTTP POST 请求的形式将事件数据实时推送至您指定的服务器端点。相比轮询 API，Webhook 能显著降低系统延迟和请求开销，适合构建实时通知、自动化审计日志、与第三方系统同步等场景。您只需注册一个目标 URL 并选择需要订阅的事件类型，ACS 将在事件发生时自动向您的服务器发送通知。

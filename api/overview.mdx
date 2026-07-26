@@ -1,7 +1,7 @@
 ---
-title: "ACS REST API 概览与快速入门"
+title: "ACS 信息中心 REST API 完整开发者概览：Base URL、请求格式、响应结构、错误码与频率限制"
 sidebarTitle: "API 概览"
-description: "ACS 提供完整的 RESTful API，支持内容管理、应用集成与用户数据访问。了解基础 URL、请求格式与响应结构。"
+description: "ACS 信息中心 REST API 基于标准 HTTP 协议，支持 JSON 数据格式，覆盖内容管理、应用集成、用户访问与 Webhook 事件推送等核心场景。本文档介绍生产与沙箱环境的 Base URL、请求头格式、统一响应结构、错误码含义以及请求频率限制规则，帮助开发者快速完成集成。"
 ---
 
 ACS 信息中心 REST API 为开发者提供了一套完整、标准化的编程接口，涵盖内容管理、应用集成与用户数据访问等核心业务场景。无论您是构建内部工具、第三方集成，还是自动化企业工作流，均可通过 API 以安全、高效的方式与 ACS 平台进行交互。本文档面向具备 HTTP 基础知识的开发者，帮助您快速上手并深入使用 ACS API。
@@ -174,15 +174,18 @@ ACS API 按业务领域划分为以下几组接口，点击对应卡片查看详
 
 <CardGroup cols={2}>
   <Card title="内容接口" icon="file-lines" href="/api/content">
-    管理企业内容资产，包括文章、公告、文档的创建、更新、查询与删除操作。
+    管理企业内容资产，包括文章、公告、文档的创建、更新、查询与删除操作。对应接口：`GET /api/v1/content`。
   </Card>
   <Card title="应用接口" icon="grid-2" href="/api/applications">
-    集成与管理已接入 ACS 信息中心的企业应用，查询应用状态与配置信息。
+    集成与管理已接入 ACS 信息中心的企业应用，查询应用状态与配置信息。对应接口：`GET /api/v1/applications`。
   </Card>
   <Card title="用户接口" icon="users" href="/api/users">
-    访问与管理用户账号信息、权限角色及偏好设置，支持用户数据的查询与更新。
+    访问与管理用户账号信息、权限角色及偏好设置，支持用户数据的查询与更新。对应接口：`GET /api/v1/users/me`。
   </Card>
   <Card title="Webhooks" icon="webhook" href="/api/webhooks">
-    配置事件推送，当 ACS 平台发生特定事件时，实时向您的服务端发送通知。
+    配置事件推送，当 ACS 平台发生特定事件时，实时向您的服务端发送通知。对应接口：`POST /api/v1/webhooks`。
+  </Card>
+  <Card title="体验与演示" icon="play" href="/concepts/experience-center">
+    浏览 ACS 信息中心提供的产品演示与互动体验内容，探索平台核心功能。沙箱接口：`GET /api/v1/experience/demos`。
   </Card>
 </CardGroup>

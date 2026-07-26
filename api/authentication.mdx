@@ -1,7 +1,7 @@
 ---
-title: "ACS API 认证：获取与使用 API 密钥"
+title: "ACS 信息中心 API 认证完全指南：创建 API 密钥、Bearer Token 用法与认证错误处理"
 sidebarTitle: "认证"
-description: "ACS API 使用 Bearer Token 认证。了解如何创建、管理和轮换 API 密钥，以及常见认证错误的处理方法。"
+description: "ACS API 采用 Bearer Token 认证机制，所有请求均需在请求头中携带有效 API 密钥。本文档介绍如何在控制台创建与管理密钥、在请求中正确使用密钥、通过 POST /auth/token 获取令牌，以及 401 与 403 认证错误的排查与处理方法。"
 ---
 
 ACS API 采用基于 API 密钥的 Bearer Token 认证机制。每一次 API 请求都必须在 HTTP 请求头中携带有效的 API 密钥，服务端将以此验证您的身份并确认访问权限。API 密钥与您的 ACS 账号绑定，请务必妥善保管，切勿泄露给未经授权的第三方。
@@ -54,6 +54,40 @@ curl -X GET https://api.acs.com/v1/users/me \
 <Note>
   请将示例中的 `sk_live_abcdefghij1234567890` 替换为您实际的 API 密钥。在生产环境中，建议通过环境变量注入密钥，而非硬编码在代码中（详见[密钥安全最佳实践](#密钥安全最佳实践)）。
 </Note>
+
+---
+
+## 通过 Token 接口获取访问令牌
+
+除直接在请求头中携带 API 密钥外，您也可以使用 `POST /api/v1/auth/token` 接口，通过 API 密钥换取短效访问令牌（Access Token）。访问令牌适合需要临时授权或对外共享有限访问权限的场景，其有效期默认为 **1 小时**。
+
+**请求示例**：
+
+```bash
+curl -X POST https://api.acs.com/v1/auth/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "api_key": "sk_live_abcdefghij1234567890"
+  }'
+```
+
+**成功响应**（HTTP `200`）：
+
+```json
+{
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "Bearer",
+    "expires_in": 3600
+  },
+  "meta": {
+    "request_id": "req_tok001",
+    "timestamp": "2024-01-15T08:00:00Z"
+  }
+}
+```
+
+获取到 `access_token` 后，在后续请求中以相同的 `Authorization: Bearer <access_token>` 格式使用该令牌即可。令牌到期后，请重新调用本接口获取新令牌。
 
 ---
 
